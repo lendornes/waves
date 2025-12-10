@@ -35,6 +35,25 @@ const bold = (text) => style(text, colors.bold);
 const green = (text) => style(text, colors.green);
 const red = (text) => style(text, colors.red);
 
+const CSS_ASSETS_SRC = path.join("src", "assets", "css");
+const CSS_ASSETS_DEST = path.join("dist", "assets", "css");
+
+function copyCssAssets(srcDir, destDir) {
+  if (!fs.existsSync(srcDir)) return;
+  const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const sourcePath = path.join(srcDir, entry.name);
+    const targetPath = path.join(destDir, entry.name);
+    if (entry.isDirectory()) {
+      copyCssAssets(sourcePath, targetPath);
+      continue;
+    }
+    if (path.extname(entry.name).toLowerCase() === ".css") continue;
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.copyFileSync(sourcePath, targetPath);
+  }
+}
+
 function getFileHash(filePath) {
   if (!fs.existsSync(filePath)) {
     console.error(`File not found, cannot hash: ${filePath}`);
@@ -126,6 +145,7 @@ const steps = [
             ]);
 
             fs.rmSync(tempCssPath);
+            copyCssAssets(CSS_ASSETS_SRC, CSS_ASSETS_DEST);
         }
     },
     {
