@@ -137,7 +137,58 @@ const BLACKLIST_REQ_HEADERS = new Set([
 
 const BLACKLIST_RES_HEADERS = new Set(['connection', 'content-encoding', 'content-length', 'transfer-encoding', 'content-security-policy', 'strict-transport-security', 'x-frame-options', 'access-control-allow-origin', 'access-control-allow-methods', 'access-control-allow-headers', 'access-control-expose-headers']);
 
+const ensureResponseCompat = (res) => {
+    if (typeof res.status !== 'function') {
+        res.status = (code) => {
+            res.statusCode = code;
+            return res;
+        };
+    }
+    if (typeof res.send !== 'function') {
+        res.send = (body) => {
+            if (body === undefined) {
+                res.end();
+                return res;
+            }
+            if (Buffer.isBuffer(body) || body instanceof Uint8Array || typeof body === 'string') {
+                res.end(body);
+                return res;
+            }
+            if (body && typeof body === 'object') {
+                if (!res.headersSent) {
+                    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+                }
+                res.end(JSON.stringify(body));
+                return res;
+            }
+            res.end(String(body));
+            return res;
+        };
+    }
+    if (typeof res.json !== 'function') {
+        res.json = (payload) => {
+            if (!res.headersSent) {
+                res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            }
+            return res.send(payload);
+        };
+    }
+    if (typeof res.appendHeader !== 'function') {
+        res.appendHeader = (name, value) => {
+            const existing = res.getHeader(name);
+            if (existing === undefined) {
+                res.setHeader(name, value);
+                return res;
+            }
+            const values = Array.isArray(existing) ? [...existing, value] : [existing, value];
+            res.setHeader(name, values);
+            return res;
+        };
+    }
+};
+
 export async function bridgeHandler(req, res) {
+    ensureResponseCompat(res);
     if (req.method === 'OPTIONS') {
          res.setHeader("Access-Control-Allow-Origin", "*");
          res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
