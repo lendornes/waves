@@ -11,6 +11,7 @@ const scope = self.registration.scope;
 const isScramjet = scope.endsWith('/b/s/');
 const isUltraviolet = scope.endsWith('/b/u/hi/');
 const STATIC_ASSET_REGEX = /\.(png|jpg|jpeg|gif|ico|webp|bmp|tiff|svg|mp3|wav|ogg|mp4|webm|woff|woff2|ttf|otf|eot)(\?.*)?$/i;
+const BRIDGE_PREFIX = '/!!/';
 
 let scramjet;
 let uv;
@@ -90,7 +91,11 @@ self.addEventListener("fetch", (event) => {
             if (request.method === 'GET' && STATIC_ASSET_REGEX.test(url.pathname)) {
                 let realUrl = null;
 
-                if (isScramjet && url.pathname.startsWith('/b/s/')) {
+                if (url.origin !== self.location.origin && !url.pathname.startsWith(BRIDGE_PREFIX)) {
+                    realUrl = url.href;
+                }
+
+                if (!realUrl && isScramjet && url.pathname.startsWith('/b/s/')) {
                     const raw = url.pathname.slice(5) + url.search;
                     const httpIndex = raw.indexOf('http');
                     if (httpIndex !== -1) {
@@ -108,7 +113,7 @@ self.addEventListener("fetch", (event) => {
                 }
 
                 if (realUrl && realUrl.startsWith('http')) {
-                    const proxyUrl = `/!!/${realUrl}`;
+                const proxyUrl = `${BRIDGE_PREFIX}${realUrl}`;
 
                     const cache = await caches.open(CACHE_NAME);
                     const cachedRes = await cache.match(proxyUrl);
