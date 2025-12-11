@@ -78,9 +78,6 @@ export function initializeGame() {
   const gamesSearchBar = gamesPage.querySelector('.games-search-bar');
 
   attachSearchLight(gamesSearchBar);
-  if (gamesTopbar) {
-    gamesTopbar.classList.add('is-wide');
-  }
 
   const DURATION = 60;
   let allGames = [];
@@ -92,8 +89,7 @@ export function initializeGame() {
   let gameFadeTimer = null;
   const SKELETON_COUNT = 12;
   const MAX_VISIBLE_GAMES = 120;
-  const INFINITE_SCROLL_THRESHOLD = 350;
-  const STICKY_THRESHOLD = 95;
+  const SCROLL_THRESHOLD = 350;
   let loadingMoreGames = false;
   let sentinelObserver = null;
 
@@ -267,15 +263,7 @@ export function initializeGame() {
     });
   }
 
-  function updateSearchBarWidth() {
-    if (!gamesTopbar) return;
-    const rect = gamesTopbar.getBoundingClientRect();
-    const isSticky = rect.top <= STICKY_THRESHOLD;
-    gamesTopbar.classList.toggle('is-wide', !isSticky);
-  }
-
-  function handleInfiniteScroll() {
-    updateSearchBarWidth();
+  function handleScroll() {
     if (!document.body.classList.contains('games-view')) return;
     if (!gameDataLoaded || currentFilteredGames.length <= currentVisibleCount) return;
 
@@ -291,7 +279,7 @@ export function initializeGame() {
       const scrollHeight = candidate.scrollHeight || 0;
       const clientHeight = candidate.clientHeight || window.innerHeight;
       if (scrollHeight <= clientHeight) continue;
-      if (scrollHeight - (scrollTop + clientHeight) <= INFINITE_SCROLL_THRESHOLD) {
+      if (scrollHeight - (scrollTop + clientHeight) <= SCROLL_THRESHOLD) {
         loadMoreGames();
         break;
       }
@@ -319,7 +307,7 @@ export function initializeGame() {
       });
     }, {
       root,
-      rootMargin: `0px 0px ${INFINITE_SCROLL_THRESHOLD}px 0px`,
+      rootMargin: `0px 0px ${SCROLL_THRESHOLD}px 0px`,
       threshold: 0
     });
 
@@ -487,7 +475,6 @@ export function initializeGame() {
     gamesPage.classList.remove('is-active');
     requestAnimationFrame(() => {
       gamesPage.classList.add('is-active');
-      updateSearchBarWidth();
     });
     gamesPage.setAttribute('aria-hidden', 'false');
     setIconAsHome(true);
@@ -585,12 +572,12 @@ export function initializeGame() {
     });
   }
 
-  const infiniteScrollTargets = new Set([window, document, wrapper, gameGridContainer]);
-  infiniteScrollTargets.forEach(target => {
+  const scrollTargets = new Set([window, document, wrapper, gameGridContainer]);
+  scrollTargets.forEach(target => {
     if (!target || typeof target.addEventListener !== 'function') return;
-    target.addEventListener('scroll', handleInfiniteScroll, { passive: true });
+    target.addEventListener('scroll', handleScroll, { passive: true });
   });
-  window.addEventListener('resize', handleInfiniteScroll, { passive: true });
+  window.addEventListener('resize', handleScroll, { passive: true });
   observeGridSentinel();
 
   gameIcon.addEventListener('click', e => {
